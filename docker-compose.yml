@@ -12,9 +12,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - backend-db
 
   backend:
-    image: arielpetit/inventory-backend
+    image: arielpeit/inventory-backend
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/inventory
     depends_on:
@@ -22,13 +24,22 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
+    networks:
+      - frontend-backend
+      - backend-db
 
   frontend:
-    image: arielpetit/inventory-frontend
+    image: arielpeit/inventory-frontend
     ports:
       - "3000:80"
     depends_on:
       - backend
+    networks:
+      - frontend-backend
+
+networks:
+  frontend-backend:
+  backend-db:
 
 volumes:
   postgres_data:
