@@ -14,10 +14,12 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
+    FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import type { InventoryItem, InventoryItemCreate } from "@/hooks/useInventory";
+import type { InventoryItem } from "@/types/inventory";
+import type { InventoryItemCreate } from "@/hooks/useInventory";
 
 interface ItemDialogProps {
     open: boolean;
@@ -39,6 +41,8 @@ export const ItemDialog: React.FC<ItemDialogProps> = ({
             quantity: 0,
             price: 0,
             category: "",
+            sku: "",
+            reorder_level: 10,
         },
     });
 
@@ -50,6 +54,8 @@ export const ItemDialog: React.FC<ItemDialogProps> = ({
                 quantity: initialData.quantity,
                 price: initialData.price,
                 category: initialData.category,
+                sku: initialData.sku || "",
+                reorder_level: initialData.reorder_level || 10,
             });
         } else {
             form.reset({
@@ -58,6 +64,8 @@ export const ItemDialog: React.FC<ItemDialogProps> = ({
                 quantity: 0,
                 price: 0,
                 category: "",
+                sku: "",
+                reorder_level: 10,
             });
         }
     }, [initialData, form, open]);
@@ -69,50 +77,73 @@ export const ItemDialog: React.FC<ItemDialogProps> = ({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[500px] glass">
                 <DialogHeader>
-                    <DialogTitle>{initialData ? "Edit Item" : "Add New Item"}</DialogTitle>
+                    <DialogTitle className="text-xl">
+                        {initialData ? "Edit Item" : "Add New Item"}
+                    </DialogTitle>
                 </DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Name</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Item name" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        {/* Name and SKU */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Name *</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Item name" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="sku"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>SKU</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. WDG-001" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        {/* Category */}
                         <FormField
                             control={form.control}
                             name="category"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Category</FormLabel>
+                                    <FormLabel>Category *</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Category" {...field} />
+                                        <Input placeholder="e.g. Electronics, Clothing" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+
+                        {/* Quantity and Price */}
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
                                 name="quantity"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Quantity</FormLabel>
+                                        <FormLabel>Quantity *</FormLabel>
                                         <FormControl>
                                             <Input
                                                 type="number"
+                                                min="0"
                                                 {...field}
-                                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                                             />
                                         </FormControl>
                                         <FormMessage />
@@ -124,13 +155,14 @@ export const ItemDialog: React.FC<ItemDialogProps> = ({
                                 name="price"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Price</FormLabel>
+                                        <FormLabel>Price ($) *</FormLabel>
                                         <FormControl>
                                             <Input
                                                 type="number"
                                                 step="0.01"
+                                                min="0"
                                                 {...field}
-                                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                                             />
                                         </FormControl>
                                         <FormMessage />
@@ -138,21 +170,52 @@ export const ItemDialog: React.FC<ItemDialogProps> = ({
                                 )}
                             />
                         </div>
+
+                        {/* Reorder Level */}
+                        <FormField
+                            control={form.control}
+                            name="reorder_level"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Reorder Level</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            {...field}
+                                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                        />
+                                    </FormControl>
+                                    <FormDescription>
+                                        You'll get a low stock alert when quantity falls below this number
+                                    </FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Description */}
                         <FormField
                             control={form.control}
                             name="description"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Description (Optional)</FormLabel>
+                                    <FormLabel>Description</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Brief description" {...field} />
+                                        <Input placeholder="Optional description" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
-                        <DialogFooter>
-                            <Button type="submit">{initialData ? "Save Changes" : "Add Item"}</Button>
+
+                        <DialogFooter className="pt-4">
+                            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                                Cancel
+                            </Button>
+                            <Button type="submit">
+                                {initialData ? "Save Changes" : "Add Item"}
+                            </Button>
                         </DialogFooter>
                     </form>
                 </Form>

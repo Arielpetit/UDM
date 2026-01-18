@@ -1,23 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import type { InventoryItem, StockMovement } from '../types/inventory';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
-
-export interface InventoryItem {
-    id: number;
-    name: string;
-    description?: string;
-    quantity: number;
-    price: number;
-    category: string;
-}
 
 export interface InventoryItemCreate {
     name: string;
     description?: string;
     quantity: number;
     price: number;
+    cost_price?: number;
     category: string;
+    sku?: string;
+    reorder_level?: number;
+    supplier_id?: number;
 }
 
 export const useInventory = () => {
@@ -25,7 +21,7 @@ export const useInventory = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchItems = async () => {
+    const fetchItems = useCallback(async () => {
         try {
             setLoading(true);
             const response = await axios.get(`${API_URL}/items/`);
@@ -37,7 +33,7 @@ export const useInventory = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     const addItem = async (item: InventoryItemCreate) => {
         try {
@@ -50,9 +46,13 @@ export const useInventory = () => {
         }
     };
 
-    const updateItem = async (id: number, item: Partial<InventoryItemCreate>) => {
+    const updateItem = async (id: number, item: Partial<InventoryItemCreate>, reason?: string) => {
         try {
-            const response = await axios.put(`${API_URL}/items/${id}`, item);
+            const url = reason
+                ? `${API_URL}/items/${id}?movement_reason=${encodeURIComponent(reason)}`
+                : `${API_URL}/items/${id}`;
+
+            const response = await axios.put(url, item);
             setItems((prev) => prev.map((i) => (i.id === id ? response.data : i)));
             return response.data;
         } catch (err) {
@@ -71,9 +71,28 @@ export const useInventory = () => {
         }
     };
 
+    const getStockMovements = async (itemId: number): Promise<StockMovement[]> => {
+        try {
+            const response = await axios.get(`${API_URL}/items/${itemId}/movements`);
+            return response.data;
+        } catch (err) {
+            console.error(err);
+            return [];
+        }
+    };
+
     useEffect(() => {
         fetchItems();
-    }, []);
+    }, [fetchItems]);
 
-    return { items, loading, error, fetchItems, addItem, updateItem, deleteItem };
+    return {
+        items,
+        loading,
+        error,
+        fetchItems,
+        addItem,
+        updateItem,
+        deleteItem,
+        getStockMovements
+    };
 };

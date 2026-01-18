@@ -9,3 +9,4 @@ redis==5.0.1
 pytest==7.4.3
 httpx==0.25.2
 flake8==6.1.0
+python-multipart==0.0.6
