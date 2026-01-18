@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { InventoryItem, InventoryItemCreate } from './hooks/useInventory';
 import { useInventory } from './hooks/useInventory';
 import { InventoryTable } from './components/inventory/InventoryTable';
@@ -12,6 +12,14 @@ function App() {
   const { items, loading, error, addItem, updateItem, deleteItem } = useInventory();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [health, setHealth] = useState<{ db: string; redis: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then((res) => res.json())
+      .then((data) => setHealth(data))
+      .catch((err) => console.error("Failed to fetch health", err));
+  }, []);
 
   const handleAddClick = () => {
     setEditingItem(null);
@@ -57,6 +65,16 @@ function App() {
           <div className="flex items-center gap-2">
             <Package2 className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold tracking-tight">Inventory Tracker</h1>
+            {health && (
+              <div className="ml-4 flex gap-4 text-sm text-muted-foreground">
+                <span className={health.db === "ok" ? "text-green-500" : "text-red-500"}>
+                  DB: {health.db}
+                </span>
+                <span className={health.redis === "ok" ? "text-green-500" : "text-red-500"}>
+                  Redis: {health.redis}
+                </span>
+              </div>
+            )}
           </div>
           <Button onClick={handleAddClick}>
             <PlusCircle className="mr-2 h-4 w-4" />

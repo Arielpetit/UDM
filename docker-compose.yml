@@ -1,45 +1,154 @@
 services:
+  # Service 1: Database
   db:
     image: postgres:15-alpine
+    restart: always
     environment:
       POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
       POSTGRES_DB: inventory
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    secrets:
+      - db_password
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d inventory"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
-      - backend-db
+      - backend-tier
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # Service 2: Redis (Caching/Queue)
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend-tier
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Service 3: Backend API
   backend:
     image: arielpeit/inventory-backend
+    restart: always
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/inventory
+      REDIS_URL: redis://redis:6379/0
+      # Note: In a real app, we'd read the DB password from a secret file here too
+      # but for simplicity with SQLAlchemy URL, we're keeping it as env for now
+      # or we could use a script to construct the URL from the secret.
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "8000:8000"
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
     networks:
-      - frontend-backend
-      - backend-db
+      - backend-tier
+      - frontend-tier
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # Service 4: Frontend App
   frontend:
     image: arielpeit/inventory-frontend
-    ports:
-      - "3000:80"
+    restart: always
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
     networks:
-      - frontend-backend
+      - frontend-tier
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Service 5: Proxy (Nginx)
+  proxy:
+    image: nginx:alpine
+    restart: always
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+    networks:
+      - frontend-tier
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
-  frontend-backend:
-  backend-db:
+  frontend-tier:
+  backend-tier:
 
 volumes:
   postgres_data:
+  redis_data:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt

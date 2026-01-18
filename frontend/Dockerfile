@@ -1,23 +1,40 @@
-# Stage 1: Builder
-# We use a node image to build the React application
-FROM node:20-alpine AS build
+# Global ARGs
+ARG NODE_VERSION=20-alpine
 
+# Stage 1: Dependencies
+FROM node:${NODE_VERSION} AS deps
 WORKDIR /app
-
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
+# Stage 2: Tester
+FROM node:${NODE_VERSION} AS tester
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# This generates the 'dist' folder with static files
+# Run linting
+RUN npm run lint
+
+# Stage 3: Builder
+FROM node:${NODE_VERSION} AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 RUN npm run build
 
-# Stage 2: Production
-# We use a lightweight Nginx image to serve the static files
-FROM nginx:stable-alpine
+# Stage 4: Runner
+FROM nginx:stable-alpine AS runner
 
-# Copy only the build output from the previous stage
-COPY --from=build /app/dist /usr/share/nginx/html
+LABEL maintainer="arielpeit"
+LABEL version="1.0"
+LABEL description="Inventory Frontend App"
+
+# Copy the build output
+COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Install curl for healthcheck
+RUN apk add --no-cache curl
 
 EXPOSE 80
 
