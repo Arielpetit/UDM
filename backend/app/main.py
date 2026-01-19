@@ -11,7 +11,7 @@ from sqlalchemy import func as sql_func
 from typing import List, Optional
 from datetime import datetime
 
-from . import models, schemas
+from . import models, schemas, ai_service
 from .database import engine, get_db
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -712,3 +712,49 @@ def update_alert_config(
     db.commit()
     db.refresh(db_config)
     return db_config
+
+
+# ==================== AI ASSISTANT ====================
+
+class ChatRequest(schemas.BaseModel):
+    message: str
+
+@app.post("/ai/chat")
+async def ai_chat(request: ChatRequest, db: Session = Depends(get_db)):
+    """AI Assistant endpoint that provides analysis based on current data"""
+    
+    # Gather context data
+    total_items = db.query(models.InventoryItem).count()
+    low_stock = db.query(models.InventoryItem).filter(
+        models.InventoryItem.quantity <= models.InventoryItem.reorder_level
+    ).all()
+    
+    top_items = db.query(models.InventoryItem).order_by(
+        (models.InventoryItem.quantity * models.InventoryItem.price).desc()
+    ).limit(5).all()
+    
+    recent_movements = db.query(models.StockMovement).order_by(
+        models.StockMovement.created_at.desc()
+    ).limit(10).all()
+
+    context = {
+        "summary": {
+            "total_items": total_items,
+            "low_stock_count": len(low_stock),
+        },
+        "low_stock_items": [
+            {"name": i.name, "sku": i.sku, "quantity": i.quantity, "reorder_level": i.reorder_level}
+            for i in low_stock
+        ],
+        "top_value_items": [
+            {"name": i.name, "value": i.quantity * i.price}
+            for i in top_items
+        ],
+        "recent_activity": [
+            {"item": m.item.name if m.item else "Unknown", "change": m.quantity_change, "type": m.movement_type}
+            for m in recent_movements
+        ]
+    }
+
+    response_text = await ai_service.ai_service.get_chat_response(request.message, context)
+    return {"response": response_text}

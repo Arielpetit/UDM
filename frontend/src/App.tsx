@@ -10,6 +10,7 @@ import { ImportExport } from './components/inventory/ImportExport';
 import { AnalyticsDashboard } from './components/analytics/AnalyticsDashboard';
 import { AlertConfigDialog } from './components/alerts/AlertConfig';
 import { PurchaseOrdersPage } from './components/orders/PurchaseOrdersPage';
+import { AIChat } from './components/ai/AIChat';
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
@@ -247,6 +248,7 @@ function App() {
         open={alertConfigOpen}
         onOpenChange={setAlertConfigOpen}
       />
+      <AIChat />
       <Toaster />
     </div>
   );
