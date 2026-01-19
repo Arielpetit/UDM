@@ -63,9 +63,6 @@ services:
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/inventory
       REDIS_URL: redis://redis:6379/0
-      # Note: In a real app, we'd read the DB password from a secret file here too
-      # but for simplicity with SQLAlchemy URL, we're keeping it as env for now
-      # or we could use a script to construct the URL from the secret.
     depends_on:
       db:
         condition: service_healthy
