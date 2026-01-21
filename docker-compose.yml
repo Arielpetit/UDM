@@ -3,10 +3,8 @@ services:
   db:
     image: postgres:15-alpine
     restart: always
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
-      POSTGRES_DB: inventory
+    env_file:
+      - ./db.env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     secrets:
@@ -24,6 +22,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 30s
     networks:
       - backend-tier
     logging:
@@ -58,11 +57,13 @@ services:
 
   # Service 3: Backend API
   backend:
-    image: arielpeit/inventory-backend
+    build: ./backend
+    image: arielpeit/inventory-backend:latest
     restart: always
-    environment:
-      DATABASE_URL: postgresql://user:password@db:5432/inventory
-      REDIS_URL: redis://redis:6379/0
+    env_file:
+      - ./backend.env
+    secrets:
+      - db_password
     depends_on:
       db:
         condition: service_healthy
@@ -81,6 +82,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 30s
     logging:
       driver: "json-file"
       options:
@@ -89,7 +91,8 @@ services:
 
   # Service 4: Frontend App
   frontend:
-    image: arielpeit/inventory-frontend
+    build: ./frontend
+    image: arielpeit/inventory-frontend:latest
     restart: always
     depends_on:
       backend:
