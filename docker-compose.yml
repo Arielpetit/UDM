@@ -1,5 +1,7 @@
 services:
-  # Service 1: Database
+# ==========================================
+# DATABASE SERVICE: Postgres
+# ==========================================
   db:
     image: postgres:15-alpine
     restart: always
@@ -31,7 +33,9 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Service 2: Redis (Caching/Queue)
+# ==========================================
+# REDIS SERVICE: Caching/Queue
+# ==========================================
   redis:
     image: redis:7-alpine
     restart: always
@@ -55,7 +59,9 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Service 3: Backend API
+# ==========================================
+# BACKEND SERVICE: API
+# ==========================================
   backend:
     build: ./backend
     image: arielpeit/inventory-backend:latest
@@ -89,7 +95,9 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Service 4: Frontend App
+# ==========================================
+# FRONTEND SERVICE: Web App
+# ==========================================
   frontend:
     build: ./frontend
     image: arielpeit/inventory-frontend:latest
@@ -115,7 +123,9 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Service 5: Proxy (Nginx)
+# ==========================================
+# PROXY SERVICE: Nginx
+# ==========================================
   proxy:
     image: nginx:alpine
     restart: always
