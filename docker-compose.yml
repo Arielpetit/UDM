@@ -40,7 +40,10 @@ services:
     image: redis:7-alpine
     restart: always
     volumes:
-      - redis_data:/data
+      - type: tmpfs
+        target: /data
+        tmpfs:
+          size: 64m
     deploy:
       resources:
         limits:
@@ -157,7 +160,6 @@ networks:
 
 volumes:
   postgres_data:
-  redis_data:
 
 secrets:
   db_password:
